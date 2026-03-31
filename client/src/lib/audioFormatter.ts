@@ -55,11 +55,9 @@ export function downsampleAudio(
     const newLength = Math.round(audioData.length / ratio);
     const result = new Float32Array(newLength);
     
-    let pointers = 0;
     for (let i = 0; i < newLength; i++) {
         const p = Math.floor(i * ratio);
         result[i] = audioData[p];
-        pointers = p;
     }
     
     return result;

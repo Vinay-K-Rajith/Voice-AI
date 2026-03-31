@@ -13,7 +13,7 @@ interface UseAudioPlaybackProps {
 export function useAudioPlayback({ onPlaybackComplete }: UseAudioPlaybackProps) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const nextPlayTimeRef = useRef<number>(0);
-  const activeSourcesRef = useRef<AudioBufferSource[]>([]);
+  const activeSourcesRef = useRef<AudioBufferSourceNode[]>([]);
 
   // Initialize AudioContext on mount with 24kHz sample rate (Gemini's voice output)
   useEffect(() => {

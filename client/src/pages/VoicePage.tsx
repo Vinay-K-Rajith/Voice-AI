@@ -30,7 +30,6 @@ export default function VoicePage() {
     sendAudioChunk, 
     isConnected, 
     isGeminiReady,
-    onGeminiReady: onGeminiReadyRef,
   } = useVoiceWebSocket({
     onAudioReceived: (base64Audio) => {
       setStatus("speaking");
@@ -138,14 +137,6 @@ export default function VoicePage() {
       stopPlayback();
     };
   }, [stopRecording, stopPlayback]);
-
-  // Show appropriate status message
-  const getStatusBadgeMessage = () => {
-    if (status === 'connecting') return '⏳ Waiting for connection...';
-    if (!isGeminiReady && status !== 'idle') return '⏳ Waiting for Gemini...';
-    if (status === 'idle') return 'Ready';
-    return status.charAt(0).toUpperCase() + status.slice(1);
-  };
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60).toString().padStart(2, "0");
@@ -273,7 +264,7 @@ export default function VoicePage() {
 
         {/* Status badge */}
         <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
-          <VoiceStatusBadge status={status} />
+          <VoiceStatusBadge status={status === 'connecting' ? 'idle' : status} />
         </div>
 
         {/* Orb */}
