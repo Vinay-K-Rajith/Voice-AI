@@ -3,7 +3,7 @@
 ## Overview
 This application has two parts:
 - **Frontend**: React + Vite (deploying to Vercel)
-- **Backend**: Node.js server with WebSocket (deploys separately - NOT on Vercel)
+- **Backend**: Node.js servffer with WebSocket (deploys separately - NOT on Vercel)
 
 Vercel can only host **serverless f  unctions** (10-second timeout limit) and cannot maintain persistent WebSocket connections. Therefore, the backend must be deployed to a platform that supports persistent connections.
 
