@@ -478,7 +478,7 @@ export default function VoicePage() {
       {/* Footer */}
       <footer className="relative z-10 text-center py-2 sm:py-4 px-3">
         <p className="text-white/20 text-xs tracking-wide">
-          Powered by <span className="text-white/35 font-medium">Entab AI</span>
+          Powered by <span className="text-white/35 font-medium">GMD AI</span>
         </p>
       </footer>
 
