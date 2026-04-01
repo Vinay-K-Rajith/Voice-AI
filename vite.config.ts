@@ -42,6 +42,23 @@ export default defineConfig(({ mode, command }) => {
         strict: true,
         deny: ["**/.*"],
       },
+      middlewareMode: false,
+      cors: {
+        origin: [
+          "localhost",
+          "127.0.0.1",
+          "https://genie-voice.duckdns.org",
+          "https://genie-voice.duckdns.org/",
+        ],
+        credentials: true,
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+      },
+      hmr: {
+        host: "genie-voice.duckdns.org",
+        protocol: "wss",
+        port: 443,
+      },
     },
     preview: {
       port: 5173,
