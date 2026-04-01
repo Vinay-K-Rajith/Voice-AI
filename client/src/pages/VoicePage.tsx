@@ -1,14 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Mic, MicOff, PhoneOff, Volume2, Settings, ChevronDown } from "lucide-react";
+import { Mic, MicOff, PhoneOff, Volume2, Settings, ChevronDown, History } from "lucide-react";
 import { VoiceOrb } from "@/components/VoiceOrb";
 import { VoiceWaveform } from "@/components/VoiceWaveform";
 import { VoiceStatusBadge } from "@/components/VoiceStatusBadge";
+import { TranscriptsModal } from "@/components/TranscriptsModal";
 import { useVoiceWebSocket } from "@/hooks/useVoiceWebSocket";
 import { useMicrophone } from "@/hooks/useMicrophone";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 
 type VoiceStatus = "idle" | "listening" | "speaking" | "processing" | "connecting";
 type VoicePhase = "inactive" | "active";
+
+// 📝 Transcript entry type for accumulating text chunks from Gemini Live API
+type TranscriptEntry = {
+  role: "user" | "ai";
+  text: string;
+  timestamp: number;
+};
 
 export default function VoicePage() {
   const [phase, setPhase] = useState<VoicePhase>("inactive");
@@ -21,6 +29,10 @@ export default function VoicePage() {
   const [volume] = useState(78);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [wsError, setWsError] = useState<string>("");
+  const [showTranscriptsModal, setShowTranscriptsModal] = useState(false);
+  
+  // 📝 NEW: Accumulator for streaming transcripts from Gemini Live API
+  const [chatHistory, setChatHistory] = useState<TranscriptEntry[]>([]);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const microphoneStartedRef = useRef(false);
@@ -38,12 +50,54 @@ export default function VoicePage() {
     onStatusChange: (message) => {
       if (message === "done_speaking") {
         setStatus("listening");
+        // Clear display when turn completes
+        setTranscript("");
+        setAiResponse("");
       }
     },
     onGeminiReady: () => {
       console.log("🟢 VoicePage: Gemini is ready!");
       setStatus("listening");
       // Microphone will auto-start once session is active and Gemini is ready
+    },
+    // 📝 NEW: Listen for transcript chunks from Gemini Live API
+    onTranscript: (role, text) => {
+      console.log(`📝 Received ${role} transcript: "${text}"`);
+      
+      // ACCUMULATE to history for permanent storage
+      setChatHistory((prevHistory) => {
+        // If history is empty, create first entry
+        if (prevHistory.length === 0) {
+          return [{ role, text, timestamp: Date.now() }];
+        }
+
+        const lastIndex = prevHistory.length - 1;
+        const lastMessage = prevHistory[lastIndex];
+
+        // If same speaker, append chunks together
+        if (lastMessage.role === role) {
+          const updatedMessage = {
+            ...lastMessage,
+            text: lastMessage.text + " " + text,
+          };
+          return [...prevHistory.slice(0, lastIndex), updatedMessage];
+        }
+
+        // Different speaker = new bubble in history
+        return [...prevHistory, { role, text, timestamp: Date.now() }];
+      });
+      
+      // DISPLAY shows ONLY current chunk being spoken (not accumulated)
+      // This gives real-time feedback of what's being said RIGHT NOW
+      if (role === "user") {
+        setTranscript(text);
+        // Clear AI display when user starts
+        setAiResponse("");
+      } else if (role === "ai") {
+        setAiResponse(text);
+        // Clear user display when AI starts
+        setTranscript("");
+      }
     },
     onError: (error) => {
       setWsError(error);
@@ -120,6 +174,22 @@ export default function VoicePage() {
   }, [isConnected, isGeminiReady]);
 
   const endSession = useCallback(() => {
+    // 💾 Save the accumulated chat history to localStorage before cleaning up
+    if (chatHistory.length > 0) {
+      try {
+        // Create a unique key using the current ISO timestamp
+        const sessionKey = `gemini_chat_${new Date().toISOString()}`;
+        
+        // Convert the array to JSON string and persist to browser's hard drive
+        localStorage.setItem(sessionKey, JSON.stringify(chatHistory));
+        console.log("💾 Transcript saved to localStorage under key:", sessionKey);
+        console.log("📊 Saved entries:", chatHistory.length);
+      } catch (error) {
+        console.error("❌ Failed to save transcript to localStorage:", error);
+      }
+    }
+
+    // 1. Run your existing cleanup code
     setPhase("inactive");
     setStatus("idle");
     setTranscript("");
@@ -128,7 +198,10 @@ export default function VoicePage() {
     stopRecording();
     stopPlayback();
     if (timerRef.current) clearInterval(timerRef.current);
-  }, [stopRecording, stopPlayback]);
+    
+    // 2. Clear the history state for the NEXT conversation
+    setChatHistory([]);
+  }, [chatHistory, stopRecording, stopPlayback]);
 
   useEffect(() => {
     return () => {
@@ -181,12 +254,20 @@ export default function VoicePage() {
       {/* Top navigation */}
       <header className="relative z-10 flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 flex-wrap gap-2 sm:gap-0">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <button
+            onClick={() => setShowTranscriptsModal(true)}
+            className="text-white/60 hover:text-white/90 transition-colors p-1.5 sm:p-2 rounded-lg sm:rounded-xl hover:bg-white/8"
+            data-testid="button-transcripts"
+            title="View transcripts"
+          >
+            <History className="w-4 h-4" />
+          </button>
           <div className="flex items-center gap-1 sm:gap-2">
             <div className="w-7 sm:w-8 h-7 sm:h-8 rounded-lg sm:rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shadow-lg flex-shrink-0">
               <span className="text-white text-xs font-bold">E</span>
             </div>
             <span className="text-white font-semibold tracking-tight text-sm sm:text-lg">
-              Entab <span className="gradient-text">AI</span>
+              GMD <span className="gradient-text">AI</span>
             </span>
           </div>
           <div className="hidden sm:block w-px h-5 bg-white/20" />
@@ -306,7 +387,7 @@ export default function VoicePage() {
         {!isActive && (
           <div className="text-center animate-fade-in space-y-2 mt-2 px-4">
             <h2 className="text-white text-lg sm:text-2xl font-semibold tracking-tight">
-              Talk to Entab AI
+              Talk to Genie AI
             </h2>
             <p className="text-white/45 text-xs sm:text-sm max-w-xs leading-relaxed">
               Start a natural voice conversation. Ask questions, get answers, and collaborate in real-time.
@@ -400,6 +481,9 @@ export default function VoicePage() {
           Powered by <span className="text-white/35 font-medium">Entab AI</span>
         </p>
       </footer>
+
+      {/* Transcripts Modal */}
+      <TranscriptsModal isOpen={showTranscriptsModal} onClose={() => setShowTranscriptsModal(false)} />
     </div>
   );
 }

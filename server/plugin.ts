@@ -51,6 +51,11 @@ async function getOrCreateGeminiClient(): Promise<GeminiLiveClient> {
       broadcastToFrontends({ type: 'status', message: 'done_speaking' });
     };
 
+    // 📝 NEW: Route transcripts to frontends
+    sharedGeminiClient.onTranscript = (role, text) => {
+      broadcastToFrontends({ type: 'transcript', role, text });
+    };
+
     sharedGeminiClient.onError = (error) => {
       console.error('🔴 Gemini error:', error.message);
       broadcastToFrontends({ type: 'error', message: error.message });

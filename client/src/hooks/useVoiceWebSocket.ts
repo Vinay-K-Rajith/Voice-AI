@@ -1,9 +1,11 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 
 interface VoiceMessage {
-  type: 'audio' | 'interrupt' | 'status' | 'error' | 'GEMINI_READY';
+  type: 'audio' | 'interrupt' | 'status' | 'error' | 'GEMINI_READY' | 'transcript';
   data?: string;
   message?: string;
+  role?: 'user' | 'ai';
+  text?: string;
 }
 
 interface UseVoiceWebSocketProps {
@@ -11,6 +13,7 @@ interface UseVoiceWebSocketProps {
   onStatusChange?: (status: string) => void;
   onError?: (error: string) => void;
   onGeminiReady?: () => void;
+  onTranscript?: (role: 'user' | 'ai', text: string) => void;
 }
 
 /**
@@ -30,6 +33,7 @@ export function useVoiceWebSocket({
   onStatusChange,
   onError,
   onGeminiReady,
+  onTranscript,
 }: UseVoiceWebSocketProps) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttempts = useRef(0);
@@ -43,6 +47,7 @@ export function useVoiceWebSocket({
     onStatusChange,
     onError,
     onGeminiReady,
+    onTranscript,
   });
 
   // Update refs when callbacks change (no dependency issues)
@@ -52,8 +57,9 @@ export function useVoiceWebSocket({
       onStatusChange,
       onError,
       onGeminiReady,
+      onTranscript,
     };
-  }, [onAudioReceived, onStatusChange, onError, onGeminiReady]);
+  }, [onAudioReceived, onStatusChange, onError, onGeminiReady, onTranscript]);
 
   const MAX_RECONNECT_ATTEMPTS = 5;
   const RECONNECT_DELAY = 3000;
@@ -103,6 +109,9 @@ export function useVoiceWebSocket({
           if (message.type === 'audio' && message.data) {
             console.log(`[VoiceWS] 📢 Received audio chunk (${message.data.length} chars)`);
             callbacksRef.current.onAudioReceived?.(message.data);
+          } else if (message.type === 'transcript' && message.role && message.text) {
+            console.log(`[VoiceWS] 📝 Received transcript: [${message.role}] ${message.text.substring(0, 50)}...`);
+            callbacksRef.current.onTranscript?.(message.role, message.text);
           } else if (message.type === 'status' && message.message) {
             console.log(`[VoiceWS] Status: ${message.message}`);
             callbacksRef.current.onStatusChange?.(message.message);
