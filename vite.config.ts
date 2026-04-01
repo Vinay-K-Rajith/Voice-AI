@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
-import path from "path";
+import path from "node:path";
+import type { Server } from "node:http";
 import { setupServer } from "./server/plugin.ts"; // Custom Vite Plugin for WebSocket backend
 
 export default defineConfig(({ mode, command }) => {
@@ -15,7 +16,7 @@ export default defineConfig(({ mode, command }) => {
       name: 'gemini-websocket-server',
       configureServer(server) {
         if (!server.httpServer) return;
-        setupServer(server.httpServer as import("http").Server); 
+        setupServer(server.httpServer as Server);
       }
     });
   }
@@ -38,26 +39,10 @@ export default defineConfig(({ mode, command }) => {
     server: {
       port: 5173,
       host: "localhost",
+      allowedHosts: ["genie-voice.duckdns.org"],
       fs: {
         strict: true,
         deny: ["**/.*"],
-      },
-      middlewareMode: false,
-      cors: {
-        origin: [
-          "localhost",
-          "127.0.0.1",
-          "https://genie-voice.duckdns.org",
-          "https://genie-voice.duckdns.org/",
-        ],
-        credentials: true,
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization"],
-      },
-      hmr: {
-        host: "genie-voice.duckdns.org",
-        protocol: "wss",
-        port: 443,
       },
     },
     preview: {
