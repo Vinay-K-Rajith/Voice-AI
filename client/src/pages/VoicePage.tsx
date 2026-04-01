@@ -374,7 +374,7 @@ export default function VoicePage() {
             )}
             {aiResponse && isSpeaking && (
               <div className="bg-sky-500/10 backdrop-blur-sm border border-sky-400/15 rounded-lg sm:rounded-2xl px-3 sm:px-5 py-2 sm:py-3">
-                <p className="text-sky-400 text-xs font-medium mb-1 uppercase tracking-widest">Entab AI</p>
+                <p className="text-sky-400 text-xs font-medium mb-1 uppercase tracking-widest">GMD AI</p>
                 <p className="text-white/85 text-xs sm:text-sm leading-relaxed" data-testid="text-ai-response">
                   {aiResponse}
                 </p>
